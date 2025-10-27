@@ -7,11 +7,14 @@ import json
 import subprocess
 import sys
 import tempfile
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from PIL import Image
+
+CHANNEL_ORDER = ["R", "G", "B", "A"]
 
 # Ensure the vendor decoder package is importable.
 VENDOR_DECODER_DIR = Path(__file__).resolve().parents[2] / "vendor" / "decoder"
@@ -79,6 +82,103 @@ def _extract_meta(image_bytes: bytes) -> Dict[str, Any]:
 def _detect_png(image_bytes: bytes) -> bool:
     """Detect if the image is a PNG based on magic bytes."""
     return _detect_format(image_bytes) == "PNG"
+
+
+def _bits_to_bytes(bits: List[int]) -> bytes:
+    """Convert a list of bits into raw bytes stopping at the first null byte."""
+
+    byte_arr = bytearray()
+    for offset in range(0, len(bits), 8):
+        chunk = bits[offset : offset + 8]
+        if len(chunk) < 8:
+            break
+        value = 0
+        for bit in chunk:
+            value = (value << 1) | bit
+        if value == 0:  # Terminator encountered
+            break
+        byte_arr.append(value)
+    return bytes(byte_arr)
+
+
+def _decode_plane_bits(img_rgba: Image.Image, plane: str) -> bytes:
+    """Extract bytes from the specified channel plane."""
+
+    plane = plane.upper()
+    bits: List[int] = []
+
+    for pixel in img_rgba.getdata():
+        for idx, channel in enumerate(CHANNEL_ORDER):
+            if channel not in plane:
+                continue
+            channel_value = pixel[idx]
+            bits.append(channel_value & 1)
+
+    return _bits_to_bytes(bits)
+
+
+def _extract_lsb_planes(image_path: Path) -> List[Dict[str, Any]]:
+    """Attempt direct LSB extraction for common channel combinations."""
+
+    try:
+        with Image.open(image_path) as img:
+            img_rgba = img.convert("RGBA")
+            img_rgba.load()
+    except Exception:
+        return []
+
+    probes = [
+        "RGB",
+        "RGBA",
+        "R",
+        "G",
+        "B",
+        "A",
+        "RG",
+        "RB",
+        "GB",
+        "RA",
+        "GA",
+        "BA",
+    ]
+
+    candidates: List[Dict[str, Any]] = []
+    for plane in probes:
+        data_bytes = _decode_plane_bits(img_rgba, plane)
+        if not data_bytes:
+            continue
+
+        text = data_bytes.decode("utf-8", errors="ignore").strip()
+        if not _is_printable_text(text):
+            continue
+
+        hex_preview = " ".join(f"{b:02x}" for b in data_bytes[:64])
+        candidate: Dict[str, Any] = {
+            "selector": plane,
+            "label": f"LSB {plane}",
+            "text": text,
+            "source": "lsb",  # Identify our internal extractor
+            "bytes_len": len(data_bytes),
+            "hex_preview": hex_preview,
+        }
+
+        # Attempt to detect zlib payloads for richer output
+        if len(data_bytes) > 2:
+            try:
+                inflated = zlib.decompress(data_bytes)
+            except Exception:
+                inflated = None
+
+            if inflated:
+                candidate["zlib_bytes_len"] = len(inflated)
+                try:
+                    candidate["zlib_text"] = inflated.decode("utf-8", errors="ignore").strip()
+                except Exception:
+                    candidate["zlib_text"] = None
+
+        candidates.append(candidate)
+
+    return candidates
 
 
 def _extract_with_zsteg(image_path: Path) -> List[Dict[str, Any]]:
@@ -356,7 +456,9 @@ def analyze_image(
         # Attempt targeted extraction for PNG images
         recovered_texts: List[Dict[str, Any]] = []
         if is_png:
-            recovered_texts = _extract_with_zsteg(image_path)
+            # First attempt built-in LSB extraction before falling back to vendor tooling.
+            recovered_texts.extend(_extract_lsb_planes(image_path))
+            recovered_texts.extend(_extract_with_zsteg(image_path))
 
         results_path = output_dir / "results.json"
         results = _load_results(results_path)
