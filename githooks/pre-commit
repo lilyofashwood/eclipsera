@@ -1,0 +1,29 @@
+#!/bin/sh
+# Prevent direct edits to vendor/ except for MANIFEST refreshes.
+set -eu
+
+# Allow initial commit to include vendor files.
+if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+  exit 0
+fi
+
+CHANGED=$(git diff --cached --name-only || true)
+
+# Block any staged changes under vendor/ except the manifest file.
+PROTECTED=$(printf '%s
+' "$CHANGED" | grep '^vendor/' | grep -v '^vendor/MANIFEST.sha256$' || true)
+if [ -n "$PROTECTED" ]; then
+  cat >&2 <<'MSG'
+[pre-commit] Direct edits under vendor/ are blocked.
+Regenerate vendor/MANIFEST.sha256 via the approved refresh process if vendor code legitimately changes.
+MSG
+  exit 1
+fi
+
+if printf '%s
+' "$CHANGED" | grep -q '^vendor/MANIFEST.sha256$'; then
+  echo "[pre-commit] Verifying vendor integrity..."
+  scripts/check_vendor_integrity.py || exit 1
+fi
+
+exit 0

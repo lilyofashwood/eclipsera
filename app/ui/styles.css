@@ -1,0 +1,61 @@
+:root {
+  --coffee-cream: #f7f5f2;
+  --cafe-accent: #b08968;
+  --cafe-accent-dark: #7f5539;
+  --cafe-foam: #ede3d9;
+  --cafe-txt: #2f2a26;
+}
+
+.stApp {
+  background: radial-gradient(circle at 20% 20%, rgba(240, 232, 223, 0.8), transparent),
+    radial-gradient(circle at 80% 0%, rgba(226, 210, 197, 0.7), transparent), var(--coffee-cream);
+  color: var(--cafe-txt);
+  font-family: "Helvetica Neue", "Segoe UI", sans-serif;
+}
+
+.stRadio > label {
+  font-weight: 600;
+  color: var(--cafe-accent-dark);
+}
+
+.stButton > button {
+  background-color: var(--cafe-accent);
+  color: white;
+  border-radius: 24px;
+  border: none;
+  padding: 0.6rem 1.4rem;
+  font-weight: 600;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.stButton > button:hover {
+  background-color: var(--cafe-accent-dark);
+}
+
+.stDownloadButton > button {
+  border-radius: 18px;
+  border: 1px solid var(--cafe-accent);
+  color: var(--cafe-accent-dark);
+  background-color: var(--coffee-cream);
+}
+
+.stDownloadButton > button:hover {
+  background-color: var(--cafe-foam);
+}
+
+.stCheckbox > label,
+.stSelectbox > label,
+.stTextArea > label,
+.stTextInput > label {
+  color: var(--cafe-accent-dark);
+  font-weight: 500;
+}
+
+.block-container {
+  padding-top: 3rem;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid rgba(127, 85, 57, 0.2);
+}

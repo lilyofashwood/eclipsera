@@ -1,0 +1,70 @@
+{
+  "generated_at": "2025-10-26T23:19:48Z",
+  "overall_pass": false,
+  "total_runs": 3,
+  "successful_runs": 2,
+  "runs": [
+    {
+      "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_1_unencrypted.png",
+      "encoded_image": "sample_encrypted_photos_LSB_text/test_photo_1_unencrypted__overall.png",
+      "scenario": {
+        "label": "overall",
+        "options": {
+          "twitter_safe": true,
+          "lsb_overall": true,
+          "channels": null,
+          "zlib": false,
+          "deep_analysis": false
+        }
+      },
+      "decode_summary": "binwalk: error; decomposer: ok; exiftool: error; foremost: error; steghide: error; strings: ok; zsteg: error",
+      "message_found": true,
+      "plane": "RGB",
+      "recovered_message": "Eclipsera golden vector v1: hello, moon"
+    },
+    {
+      "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_1_unencrypted.png",
+      "encoded_image": "sample_encrypted_photos_LSB_text/test_photo_1_unencrypted__channels_rgb.png",
+      "scenario": {
+        "label": "channels_rgb",
+        "options": {
+          "twitter_safe": true,
+          "lsb_overall": false,
+          "channels": [
+            "R",
+            "G",
+            "B"
+          ],
+          "zlib": false,
+          "deep_analysis": false
+        }
+      },
+      "decode_summary": "binwalk: error; decomposer: ok; exiftool: error; foremost: error; steghide: error; strings: ok; zsteg: error",
+      "message_found": true,
+      "plane": "RGB",
+      "recovered_message": "Eclipsera golden vector v1: hello, moon"
+    },
+    {
+      "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_1_unencrypted.png",
+      "encoded_image": "sample_encrypted_photos_LSB_text/test_photo_1_unencrypted__rgb_zlib_deep.png",
+      "scenario": {
+        "label": "rgb_zlib_deep",
+        "options": {
+          "twitter_safe": true,
+          "lsb_overall": false,
+          "channels": [
+            "R",
+            "G",
+            "B"
+          ],
+          "zlib": true,
+          "deep_analysis": true
+        }
+      },
+      "decode_summary": "binwalk: error; decomposer: ok; exiftool: error; foremost: error; outguess: error; steghide: error; strings: ok; zsteg: error",
+      "message_found": false,
+      "plane": "RGB",
+      "recovered_message": null
+    }
+  ]
+}

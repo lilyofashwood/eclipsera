@@ -1,0 +1,13 @@
+binwalk: error; decomposer: ok; exiftool: error; foremost: error; outguess: error; steghide: error; strings: ok; zsteg: error
+
+Message detected: no
+
+Analyzer statuses:
+- binwalk: error
+- decomposer: ok
+- exiftool: error
+- foremost: error
+- outguess: error
+- steghide: error
+- strings: ok
+- zsteg: error

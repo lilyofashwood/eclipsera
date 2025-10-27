@@ -1,0 +1,212 @@
+"""Adapter for the vendor decoder (AperiSolve)."""
+
+from __future__ import annotations
+
+import io
+import json
+import sys
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from PIL import Image
+
+# Ensure the vendor decoder package is importable.
+VENDOR_DECODER_DIR = Path(__file__).resolve().parents[2] / "vendor" / "decoder"
+if str(VENDOR_DECODER_DIR) not in sys.path:
+    sys.path.insert(0, str(VENDOR_DECODER_DIR))
+
+from aperisolve.analyzers.binwalk import analyze_binwalk  # type: ignore  # noqa: E402
+from aperisolve.analyzers.decomposer import analyze_decomposer  # type: ignore  # noqa: E402
+from aperisolve.analyzers.exiftool import analyze_exiftool  # type: ignore  # noqa: E402
+from aperisolve.analyzers.foremost import analyze_foremost  # type: ignore  # noqa: E402
+from aperisolve.analyzers.outguess import analyze_outguess  # type: ignore  # noqa: E402
+from aperisolve.analyzers.steghide import analyze_steghide  # type: ignore  # noqa: E402
+from aperisolve.analyzers.strings import analyze_strings  # type: ignore  # noqa: E402
+from aperisolve.analyzers.zsteg import analyze_zsteg  # type: ignore  # noqa: E402
+
+
+@dataclass
+class DecoderOptions:
+    """Parameters controlling how the vendor analyzers are executed."""
+
+    filename: str = "upload.png"
+    password: Optional[str] = None
+    deep: bool = False
+
+
+def _sanitise_filename(name: str) -> str:
+    candidate = Path(name).name or "upload.png"
+    if "." not in candidate:
+        return candidate + ".png"
+    return candidate
+
+
+def _load_results(results_path: Path) -> Dict[str, Any]:
+    if not results_path.exists():
+        return {}
+    return json.loads(results_path.read_text(encoding="utf-8"))
+
+
+def _collect_text_lines(results: Dict[str, Any]) -> List[str]:
+    lines: List[str] = []
+    for data in results.values():
+        output = data.get("output") if isinstance(data, dict) else None
+        if isinstance(output, list):
+            lines.extend(str(item) for item in output if item)
+    return lines
+
+
+def _resolve_plane_images(output_dir: Path, results: Dict[str, Any]) -> List[Dict[str, Any]]:
+    planes: List[Dict[str, Any]] = []
+    deco = results.get("decomposer")
+    if not isinstance(deco, dict):
+        return planes
+    if deco.get("status") != "ok":
+        return planes
+
+    images = deco.get("images", {})
+    if not isinstance(images, dict):
+        return planes
+
+    for group_name, entries in images.items():
+        if not isinstance(entries, list):
+            continue
+        for rel in entries:
+            if not isinstance(rel, str):
+                continue
+            if not rel.startswith("/image/"):
+                continue
+            relative = rel[len("/image/") :]
+            plane_path = output_dir.parent / relative
+            if not plane_path.exists():
+                continue
+            image_bytes = plane_path.read_bytes()
+            preview = Image.open(io.BytesIO(image_bytes))
+            preview.load()
+            planes.append(
+                {
+                    "label": f"{group_name}: {plane_path.name}",
+                    "image_bytes": image_bytes,
+                    "pil_image": preview,
+                }
+            )
+    return planes
+
+
+def _collect_artifacts(output_dir: Path, results: Dict[str, Any]) -> List[Dict[str, Any]]:
+    artifacts: List[Dict[str, Any]] = []
+    for name, data in results.items():
+        if not isinstance(data, dict):
+            continue
+        download = data.get("download")
+        if not isinstance(download, str):
+            continue
+        stem = download.rsplit("/", 1)[-1]
+        archive_path = output_dir / f"{stem}.7z"
+        if not archive_path.exists():
+            continue
+        artifacts.append(
+            {
+                "source": name,
+                "name": archive_path.name,
+                "bytes": archive_path.read_bytes(),
+            }
+        )
+    return artifacts
+
+
+def _build_summary(results: Dict[str, Any]) -> str:
+    parts: List[str] = []
+    for analyzer, data in sorted(results.items()):
+        if not isinstance(data, dict):
+            continue
+        status = data.get("status", "unknown")
+        parts.append(f"{analyzer}: {status}")
+    return "; ".join(parts) if parts else "No analyzers executed"
+
+
+def analyze_image(
+    image_bytes: bytes,
+    *,
+    options: DecoderOptions | Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    """Execute the vendor analyzers and collate their results."""
+
+    if not image_bytes:
+        raise ValueError("An image is required for analysis.")
+
+    opts = DecoderOptions(**options) if isinstance(options, dict) else options
+    if opts is None:
+        opts = DecoderOptions()
+
+    image_name = _sanitise_filename(opts.filename)
+
+    supplemental_results: Dict[str, Dict[str, Any]] = {}
+
+    with tempfile.TemporaryDirectory(prefix="eclipsera-decode-") as tmp:
+        tmp_path = Path(tmp)
+        output_dir = tmp_path / "analysis"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        image_path = output_dir.parent / image_name
+        image_path.write_bytes(image_bytes)
+
+        analyzers: List[tuple[str, Any, tuple[Any, ...]]] = [
+            ("binwalk", analyze_binwalk, (image_path, output_dir)),
+            ("decomposer", analyze_decomposer, (image_path, output_dir)),
+            ("exiftool", analyze_exiftool, (image_path, output_dir)),
+            ("foremost", analyze_foremost, (image_path, output_dir)),
+            ("strings", analyze_strings, (image_path, output_dir)),
+            ("steghide", analyze_steghide, (image_path, output_dir, opts.password)),
+            ("zsteg", analyze_zsteg, (image_path, output_dir)),
+        ]
+
+        if opts.deep:
+            analyzers.append(
+                ("outguess", analyze_outguess, (image_path, output_dir, opts.password))
+            )
+
+        for name, func, func_args in analyzers:
+            try:
+                func(*func_args)
+            except FileNotFoundError as exc:
+                supplemental_results[name] = {
+                    "status": "error",
+                    "error": f"Dependency missing: {exc}",
+                }
+            except Exception as exc:  # pragma: no cover - defensive path
+                supplemental_results[name] = {
+                    "status": "error",
+                    "error": str(exc),
+                }
+
+        results_path = output_dir / "results.json"
+        results = _load_results(results_path)
+        results.update(supplemental_results)
+
+        planes = _resolve_plane_images(output_dir, results)
+        artifacts = _collect_artifacts(output_dir, results)
+        summary = _build_summary(results)
+        text_lines = _collect_text_lines(results)
+
+        log_lines: List[str] = []
+        for analyzer, data in sorted(results.items()):
+            if not isinstance(data, dict):
+                continue
+            status = data.get("status", "unknown")
+            if status == "ok":
+                output = data.get("output")
+                snippet = ", ".join(output[:3]) if isinstance(output, list) else ""
+                log_lines.append(f"[{analyzer}] ok {snippet}")
+            else:
+                log_lines.append(f"[{analyzer}] {status}: {data.get('error', '')}")
+
+        return {
+            "summary": summary,
+            "planes": planes,
+            "artifacts": artifacts,
+            "logs": "\n".join(log_lines),
+            "results": results,
+            "text_lines": text_lines,
+        }

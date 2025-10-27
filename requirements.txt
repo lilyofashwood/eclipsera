@@ -1,0 +1,11 @@
+streamlit==1.32.2
+Pillow==10.2.0
+numpy==1.26.4
+Flask==2.3.3
+Flask-SQLAlchemy==3.1.1
+redis==5.0.3
+rq==1.15.1
+psycopg2-binary==2.9.9
+types-Flask-SQLAlchemy==2.5.9.4
+sqlalchemy-stubs==0.4
+gunicorn==21.2.0

@@ -1,0 +1,12 @@
+binwalk
+foremost
+exiftool
+steghide
+ruby-full
+outguess
+pngcheck
+redis-server
+p7zip-full
+zip
+unzip
+binutils
