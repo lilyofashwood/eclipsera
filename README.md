@@ -84,13 +84,31 @@ _(Deployment requires platform credentials; capture the final URL after verifyin
 
 ## Troubleshooting decode on PNG
 
-Eclipsera automatically detects PNG images and adjusts analyzer behavior for best results:
+Eclipsera automatically detects PNG images and adjusts analyzer behavior for best results.
+
+### PNG vs JPEG analyzer compatibility
+
+| Analyzer | PNG | JPEG | Notes |
+|----------|-----|------|-------|
+| **zsteg** | ✅ Yes | ❌ No | Primary tool for PNG LSB extraction |
+| **steghide** | ❌ No | ✅ Yes | JPEG/BMP only; marked SKIPPED for PNG |
+| **outguess** | ❌ No | ✅ Yes | JPEG-centric; marked SKIPPED for PNG |
+| **binwalk** | ✅ Yes | ✅ Yes | File carving; "no extractor" is non-fatal |
+| **exiftool** | ✅ Yes | ✅ Yes | Metadata extraction |
+| **foremost** | ✅ Yes | ✅ Yes | File recovery |
+| **strings** | ✅ Yes | ✅ Yes | ASCII string extraction |
+| **decomposer** | ✅ Yes | ✅ Yes | Bit-plane decomposition |
 
 ### PNG-specific extraction
 - **PNG images**: Use LSB (Least Significant Bit) planes with zsteg for extraction
-  - Analyzers `steghide` and `outguess` are marked as SKIPPED (they only support JPEG/BMP)
-  - The decoder automatically runs targeted zsteg extraction with multiple selectors (LSB Red, MSB Red, LSB RGB, etc.)
-  - Recovered text appears in the "Recovered Text" section above other analyzer results
+  - Analyzers `steghide` and `outguess` are marked as SKIPPED (not ERROR) for PNG
+  - The decoder automatically runs targeted zsteg extraction with multiple selectors:
+    - `b1,r,lsb,xy` - LSB Red channel
+    - `b1,r,msb,xy` - MSB Red channel
+    - `b1,g,lsb,xy` - LSB Green channel
+    - `b1,b,lsb,xy` - LSB Blue channel
+    - `b1,rgb,lsb,xy` - LSB RGB combined
+  - Recovered text appears in the "🔓 Recovered Text" section with diagnostics
 
 ### JPEG images
 - **JPEG images**: `steghide` and `outguess` analyzers will run normally
@@ -98,11 +116,20 @@ Eclipsera automatically detects PNG images and adjusts analyzer behavior for bes
   - PNG-specific zsteg extraction is skipped for JPEG files
 
 ### Important notes
-- **Avoid re-saving images** through tools that recompress them (e.g., Preview, Twitter, iMessage, screenshot tools)
-  - These operations often destroy LSB data embedded in PNG images
-  - Always use the original encoded PNG file for decryption
+- **Avoid re-saving images** through tools that recompress them:
+  - macOS Preview, Twitter, iMessage, screenshot tools often destroy LSB data
+  - Always use the original downloaded PNG file for decryption
+  - The encoder shows a warning: "Use the downloaded PNG directly"
 - **Compression artifacts**: If the image has been compressed or converted, LSB steganography may be unrecoverable
 - **File format detection**: The decoder uses magic bytes to detect PNG vs JPEG automatically
+- **Twitter-safe mode**: The encoder's "Twitter-safe" option compresses to <900KB while preserving LSB capacity
+
+### Visibility features
+The decoder UI now includes:
+- **🔓 Recovered Text**: Shows plaintext extracted from PNG LSB planes
+- **🔬 Diagnostics**: Technical details (selector, byte length, hex preview)
+- **📊 Analyzer Status**: Clean table showing ok/skipped/error counts
+- **📋 Full analyzer logs**: Expandable section with detailed output
 
 ### Manual extraction
 For debugging, you can manually extract text from a PNG using the helper script:

@@ -50,12 +50,12 @@ def _detect_png(image_bytes: bytes) -> bool:
     return image_bytes[:8] == b'\x89PNG\r\n\x1a\n'
 
 
-def _extract_with_zsteg(image_path: Path) -> List[Dict[str, str]]:
+def _extract_with_zsteg(image_path: Path) -> List[Dict[str, Any]]:
     """
     Attempt to extract hidden text from PNG using targeted zsteg selectors.
     Returns a list of candidates with their selector and extracted text.
     """
-    candidates: List[Dict[str, str]] = []
+    candidates: List[Dict[str, Any]] = []
     selectors = [
         ("b1,r,lsb,xy", "LSB Red"),
         ("b1,r,msb,xy", "MSB Red"),
@@ -77,10 +77,16 @@ def _extract_with_zsteg(image_path: Path) -> List[Dict[str, str]]:
                 text = result.stdout.strip()
                 # Filter out empty or binary-looking content
                 if text and len(text) > 0 and _is_printable_text(text[:200]):
+                    # Get byte representation for hex preview
+                    text_bytes = text.encode('utf-8', errors='ignore')
+                    hex_preview = ' '.join(f'{b:02x}' for b in text_bytes[:64])
+
                     candidates.append({
                         "selector": selector,
                         "label": label,
                         "text": text,
+                        "bytes_len": len(text_bytes),
+                        "hex_preview": hex_preview,
                     })
         except (subprocess.TimeoutExpired, FileNotFoundError):
             continue
@@ -253,7 +259,7 @@ def analyze_image(
                 }
 
         # Attempt targeted extraction for PNG images
-        recovered_texts: List[Dict[str, str]] = []
+        recovered_texts: List[Dict[str, Any]] = []
         if is_png:
             recovered_texts = _extract_with_zsteg(image_path)
 
