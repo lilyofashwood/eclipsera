@@ -244,8 +244,8 @@ def _build_summary(results: Dict[str, Any]) -> str:
     return "; ".join(parts) if parts else "No analyzers executed"
 
 
-def _build_analyzer_details(results: Dict[str, Any], output_dir: Path) -> List[Dict[str, Any]]:
-    """Build detailed analyzer information including log paths."""
+def _build_analyzer_details(results: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Build detailed analyzer information."""
     analyzers = []
     for name, data in sorted(results.items()):
         if not isinstance(data, dict):
@@ -254,16 +254,10 @@ def _build_analyzer_details(results: Dict[str, Any], output_dir: Path) -> List[D
         status = data.get("status", "unknown")
         reason = data.get("reason", "") or data.get("error", "")
 
-        # Look for stdout/stderr files
-        stdout_path = output_dir / f"{name}.stdout"
-        stderr_path = output_dir / f"{name}.stderr"
-
         analyzer_info = {
             "name": name,
             "status": status,
             "reason": reason,
-            "stdout_path": str(stdout_path) if stdout_path.exists() else None,
-            "stderr_path": str(stderr_path) if stderr_path.exists() else None,
         }
         analyzers.append(analyzer_info)
 
@@ -370,7 +364,7 @@ def analyze_image(
         best_candidate = _select_best_candidate(candidates)
 
         # Build analyzer details
-        analyzers = _build_analyzer_details(results, output_dir)
+        analyzers = _build_analyzer_details(results)
         selectors_hit = _build_selectors_hit(candidates)
 
         planes = _resolve_plane_images(output_dir, results)
@@ -400,7 +394,7 @@ def analyze_image(
             "candidates": candidates,
             "analyzers": analyzers,
             "selectors_hit": selectors_hit,
-            "bitplane_path": str(image_path),  # For lazy bitplane generation
+            "image_bytes": image_bytes,  # For lazy bitplane generation and channel dumps
             # Existing fields (for backward compatibility)
             "summary": summary,
             "planes": planes,

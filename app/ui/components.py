@@ -265,6 +265,8 @@ def _trim_log(log_content: str, max_lines: int = 150) -> str:
 def render_analyzers_table(result: Dict[str, Any]) -> None:
     """Display analyzer status table with expandable logs."""
     analyzers = result.get("analyzers", [])
+    results = result.get("results", {})
+
     if not analyzers:
         st.caption("No analyzer information available.")
         return
@@ -274,8 +276,6 @@ def render_analyzers_table(result: Dict[str, Any]) -> None:
         name = analyzer.get("name", "unknown")
         status = analyzer.get("status", "unknown")
         reason = analyzer.get("reason", "")
-        stdout_path = analyzer.get("stdout_path")
-        stderr_path = analyzer.get("stderr_path")
 
         # Status icon
         if status == "ok":
@@ -290,44 +290,38 @@ def render_analyzers_table(result: Dict[str, Any]) -> None:
             if reason:
                 st.caption(f"Reason: {reason}")
 
-            # Show trimmed logs if available
-            if stdout_path:
-                try:
-                    stdout = Path(stdout_path).read_text(encoding="utf-8", errors="ignore")
-                    if stdout.strip():
-                        st.text("stdout (trimmed):")
-                        st.code(_trim_log(stdout, 150), language=None)
+            # Get analyzer data from results
+            analyzer_data = results.get(name, {})
+            if isinstance(analyzer_data, dict):
+                # Show output if available
+                output = analyzer_data.get("output")
+                if output:
+                    if isinstance(output, list):
+                        output_text = "\n".join(str(item) for item in output if item)
+                    else:
+                        output_text = str(output)
+
+                    if output_text.strip():
+                        st.text("Output:")
+                        st.code(_trim_log(output_text, 150), language=None)
                         st.download_button(
-                            "Download full stdout",
-                            data=stdout,
-                            file_name=f"{name}_stdout.log",
+                            "Download full output",
+                            data=output_text,
+                            file_name=f"{name}_output.txt",
                             mime="text/plain",
-                            key=f"download-stdout-{name}",
+                            key=f"download-output-{name}",
                         )
-                except Exception:
-                    pass
 
-            if stderr_path:
-                try:
-                    stderr = Path(stderr_path).read_text(encoding="utf-8", errors="ignore")
-                    if stderr.strip():
-                        st.text("stderr (trimmed):")
-                        st.code(_trim_log(stderr, 150), language=None)
-                        st.download_button(
-                            "Download full stderr",
-                            data=stderr,
-                            file_name=f"{name}_stderr.log",
-                            mime="text/plain",
-                            key=f"download-stderr-{name}",
-                        )
-                except Exception:
-                    pass
+                # Show error if available
+                error = analyzer_data.get("error")
+                if error:
+                    st.error(f"Error: {error}")
 
 
-def _generate_bitplane(image_path: str, channel: str, bit: int) -> Optional[bytes]:
+def _generate_bitplane(image_bytes: bytes, channel: str, bit: int) -> Optional[bytes]:
     """Generate a single bit-plane image."""
     try:
-        img = Image.open(image_path).convert("RGBA")
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
         width, height = img.size
 
         # Create new image for this bit plane
@@ -352,26 +346,29 @@ def _generate_bitplane(image_path: str, channel: str, bit: int) -> Optional[byte
 
 def render_bitplane_explorer(result: Dict[str, Any]) -> None:
     """Display bit-plane explorer with lazy generation."""
-    image_path = result.get("bitplane_path")
-    if not image_path or not Path(image_path).exists():
+    image_bytes = result.get("image_bytes")
+    if not image_bytes:
         st.caption("Bit-plane explorer not available for this image.")
         return
 
-    st.caption("Click any bit-plane to view full size. OCR attempts are experimental.")
+    st.caption("Generate bit-planes on demand by selecting channel and bit.")
 
     channels = ["R", "G", "B", "A"]
     bits = list(range(8))
 
-    # Create grid of bit-planes
+    # Create grid of bit-planes with thumbnails
     for channel in channels:
         st.markdown(f"**{channel} channel**")
         cols = st.columns(8)
         for bit_idx, col in zip(bits, cols):
             with col:
-                if st.button(f"Bit {bit_idx}", key=f"bitplane-{channel}-{bit_idx}"):
-                    plane_bytes = _generate_bitplane(image_path, channel, bit_idx)
-                    if plane_bytes:
-                        st.image(plane_bytes, caption=f"{channel} Bit {bit_idx}", use_column_width=True)
+                if st.button(f"Bit {bit_idx}", key=f"bitplane-{channel}-{bit_idx}", use_container_width=True):
+                    with st.spinner(f"Generating {channel} bit {bit_idx}..."):
+                        plane_bytes = _generate_bitplane(image_bytes, channel, bit_idx)
+                        if plane_bytes:
+                            st.image(plane_bytes, caption=f"{channel} Bit {bit_idx}", use_column_width=True)
+                        else:
+                            st.error(f"Failed to generate bit-plane")
 
 
 def _attempt_decode_text(data: bytes, method: str) -> Optional[str]:
@@ -413,8 +410,8 @@ def _attempt_decode_text(data: bytes, method: str) -> Optional[str]:
 
 def render_channel_text_dumps(result: Dict[str, Any]) -> None:
     """Display channel text dumps with multiple decoder attempts."""
-    image_path = result.get("bitplane_path")
-    if not image_path or not Path(image_path).exists():
+    image_bytes = result.get("image_bytes")
+    if not image_bytes:
         st.caption("Channel text dumps not available.")
         return
 
@@ -422,7 +419,7 @@ def render_channel_text_dumps(result: Dict[str, Any]) -> None:
 
     # Extract raw data from LSB of each channel
     try:
-        img = Image.open(image_path).convert("RGBA")
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
         width, height = img.size
 
         for channel_name, channel_idx in [("R", 0), ("G", 1), ("B", 2), ("A", 3)]:

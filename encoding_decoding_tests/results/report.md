@@ -1,6 +1,6 @@
 # Eclipsera Encode→Decode Report
 
-Generated: 2025-10-27T03:37:09Z
+Generated: 2025-10-27T03:58:43Z
 Overall status: ❌ FAIL
 Successful runs: 4 / 6
 
