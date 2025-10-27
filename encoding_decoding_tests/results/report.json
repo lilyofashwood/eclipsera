@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-10-27T03:07:06Z",
+  "generated_at": "2025-10-27T03:37:09Z",
   "overall_pass": false,
   "total_runs": 6,
   "successful_runs": 4,
@@ -22,7 +22,12 @@
       "plane": "RGB",
       "recovered_message": "Eclipsera golden vector v1: hello, moon",
       "recovered_from_zsteg": null,
-      "recovered_texts_count": 0
+      "recovered_from_candidates": null,
+      "recovered_texts_count": 0,
+      "candidates_count": 0,
+      "has_best_candidate": false,
+      "steghide_skipped": true,
+      "outguess_skipped": false
     },
     {
       "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_1_unencrypted.png",
@@ -46,7 +51,12 @@
       "plane": "RGB",
       "recovered_message": "Eclipsera golden vector v1: hello, moon",
       "recovered_from_zsteg": null,
-      "recovered_texts_count": 0
+      "recovered_from_candidates": null,
+      "recovered_texts_count": 0,
+      "candidates_count": 0,
+      "has_best_candidate": false,
+      "steghide_skipped": true,
+      "outguess_skipped": false
     },
     {
       "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_1_unencrypted.png",
@@ -70,7 +80,12 @@
       "plane": "RGB",
       "recovered_message": null,
       "recovered_from_zsteg": null,
-      "recovered_texts_count": 0
+      "recovered_from_candidates": null,
+      "recovered_texts_count": 0,
+      "candidates_count": 0,
+      "has_best_candidate": false,
+      "steghide_skipped": true,
+      "outguess_skipped": true
     },
     {
       "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_2.png",
@@ -90,7 +105,12 @@
       "plane": "RGB",
       "recovered_message": "Eclipsera golden vector v1: hello, moon",
       "recovered_from_zsteg": null,
-      "recovered_texts_count": 0
+      "recovered_from_candidates": null,
+      "recovered_texts_count": 0,
+      "candidates_count": 0,
+      "has_best_candidate": false,
+      "steghide_skipped": true,
+      "outguess_skipped": false
     },
     {
       "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_2.png",
@@ -114,7 +134,12 @@
       "plane": "RGB",
       "recovered_message": "Eclipsera golden vector v1: hello, moon",
       "recovered_from_zsteg": null,
-      "recovered_texts_count": 0
+      "recovered_from_candidates": null,
+      "recovered_texts_count": 0,
+      "candidates_count": 0,
+      "has_best_candidate": false,
+      "steghide_skipped": true,
+      "outguess_skipped": false
     },
     {
       "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_2.png",
@@ -138,7 +163,12 @@
       "plane": "RGB",
       "recovered_message": null,
       "recovered_from_zsteg": null,
-      "recovered_texts_count": 0
+      "recovered_from_candidates": null,
+      "recovered_texts_count": 0,
+      "candidates_count": 0,
+      "has_best_candidate": false,
+      "steghide_skipped": true,
+      "outguess_skipped": true
     }
   ]
 }

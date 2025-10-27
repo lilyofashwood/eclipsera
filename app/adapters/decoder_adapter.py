@@ -44,10 +44,41 @@ def _sanitise_filename(name: str) -> str:
     return candidate
 
 
+def _detect_format(image_bytes: bytes) -> str:
+    """Detect the image format based on magic bytes."""
+    if image_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+        return "PNG"
+    elif image_bytes[:2] == b'\xff\xd8':
+        return "JPEG"
+    elif image_bytes[:4] == b'RIFF' and image_bytes[8:12] == b'WEBP':
+        return "WEBP"
+    elif image_bytes[:2] == b'BM':
+        return "BMP"
+    return "UNKNOWN"
+
+
+def _extract_meta(image_bytes: bytes) -> Dict[str, Any]:
+    """Extract metadata from the image."""
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as img:
+            return {
+                "format": _detect_format(image_bytes),
+                "width": img.width,
+                "height": img.height,
+                "size_bytes": len(image_bytes),
+            }
+    except Exception:
+        return {
+            "format": "UNKNOWN",
+            "width": 0,
+            "height": 0,
+            "size_bytes": len(image_bytes),
+        }
+
+
 def _detect_png(image_bytes: bytes) -> bool:
     """Detect if the image is a PNG based on magic bytes."""
-    # PNG signature: 89 50 4E 47 0D 0A 1A 0A
-    return image_bytes[:8] == b'\x89PNG\r\n\x1a\n'
+    return _detect_format(image_bytes) == "PNG"
 
 
 def _extract_with_zsteg(image_path: Path) -> List[Dict[str, Any]]:
@@ -85,6 +116,7 @@ def _extract_with_zsteg(image_path: Path) -> List[Dict[str, Any]]:
                         "selector": selector,
                         "label": label,
                         "text": text,
+                        "source": "zsteg",
                         "bytes_len": len(text_bytes),
                         "hex_preview": hex_preview,
                     })
@@ -92,6 +124,31 @@ def _extract_with_zsteg(image_path: Path) -> List[Dict[str, Any]]:
             continue
 
     return candidates
+
+
+def _normalize_text(text: str) -> str:
+    """Normalize text for deduplication."""
+    return text.strip().lower()
+
+
+def _deduplicate_candidates(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Remove duplicate candidates based on normalized text."""
+    seen = set()
+    unique = []
+    for candidate in candidates:
+        normalized = _normalize_text(candidate.get("text", ""))
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            unique.append(candidate)
+    return unique
+
+
+def _select_best_candidate(candidates: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Select the best candidate from the list (longest meaningful text)."""
+    if not candidates:
+        return None
+    # Prefer longer texts as they're more likely to be the intended message
+    return max(candidates, key=lambda c: len(c.get("text", "")))
 
 
 def _is_printable_text(text: str) -> bool:
@@ -187,6 +244,44 @@ def _build_summary(results: Dict[str, Any]) -> str:
     return "; ".join(parts) if parts else "No analyzers executed"
 
 
+def _build_analyzer_details(results: Dict[str, Any], output_dir: Path) -> List[Dict[str, Any]]:
+    """Build detailed analyzer information including log paths."""
+    analyzers = []
+    for name, data in sorted(results.items()):
+        if not isinstance(data, dict):
+            continue
+
+        status = data.get("status", "unknown")
+        reason = data.get("reason", "") or data.get("error", "")
+
+        # Look for stdout/stderr files
+        stdout_path = output_dir / f"{name}.stdout"
+        stderr_path = output_dir / f"{name}.stderr"
+
+        analyzer_info = {
+            "name": name,
+            "status": status,
+            "reason": reason,
+            "stdout_path": str(stdout_path) if stdout_path.exists() else None,
+            "stderr_path": str(stderr_path) if stderr_path.exists() else None,
+        }
+        analyzers.append(analyzer_info)
+
+    return analyzers
+
+
+def _build_selectors_hit(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Build a list of selectors that produced results."""
+    selectors = []
+    for candidate in candidates:
+        selectors.append({
+            "tool": candidate.get("source", "unknown"),
+            "selector": candidate.get("selector", ""),
+            "bytes_len": candidate.get("bytes_len", 0),
+        })
+    return selectors
+
+
 def analyze_image(
     image_bytes: bytes,
     *,
@@ -267,6 +362,17 @@ def analyze_image(
         results = _load_results(results_path)
         results.update(supplemental_results)
 
+        # Extract metadata
+        meta = _extract_meta(image_bytes)
+
+        # Deduplicate candidates and select best
+        candidates = _deduplicate_candidates(recovered_texts)
+        best_candidate = _select_best_candidate(candidates)
+
+        # Build analyzer details
+        analyzers = _build_analyzer_details(results, output_dir)
+        selectors_hit = _build_selectors_hit(candidates)
+
         planes = _resolve_plane_images(output_dir, results)
         artifacts = _collect_artifacts(output_dir, results)
         summary = _build_summary(results)
@@ -288,6 +394,14 @@ def analyze_image(
                 log_lines.append(f"[{analyzer}] {status}: {data.get('error', '')}")
 
         return {
+            # New structured fields
+            "meta": meta,
+            "best_candidate": best_candidate,
+            "candidates": candidates,
+            "analyzers": analyzers,
+            "selectors_hit": selectors_hit,
+            "bitplane_path": str(image_path),  # For lazy bitplane generation
+            # Existing fields (for backward compatibility)
             "summary": summary,
             "planes": planes,
             "artifacts": artifacts,

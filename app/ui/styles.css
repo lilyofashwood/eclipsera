@@ -59,3 +59,57 @@ hr {
   border: none;
   border-top: 1px solid rgba(127, 85, 57, 0.2);
 }
+
+/* Large text areas for recovered text */
+.stTextArea textarea {
+  font-family: "Courier New", "Monaco", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Code blocks for logs and diagnostics */
+.stCode {
+  font-family: "Courier New", "Monaco", monospace;
+  font-size: 13px;
+  background-color: rgba(47, 42, 38, 0.05);
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+/* Tab styling */
+.stTabs [data-baseweb="tab-list"] {
+  gap: 8px;
+}
+
+.stTabs [data-baseweb="tab"] {
+  background-color: var(--cafe-foam);
+  border-radius: 8px 8px 0 0;
+  padding: 8px 16px;
+  color: var(--cafe-accent-dark);
+}
+
+.stTabs [aria-selected="true"] {
+  background-color: var(--cafe-accent);
+  color: white;
+}
+
+/* Expander styling */
+.streamlit-expanderHeader {
+  background-color: var(--cafe-foam);
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* Metrics */
+.stMetric {
+  background-color: rgba(240, 232, 223, 0.3);
+  padding: 0.5rem;
+  border-radius: 8px;
+}
+
+/* Text inputs and areas with monospace */
+textarea[disabled] {
+  background-color: rgba(240, 232, 223, 0.5);
+  color: var(--cafe-txt);
+  cursor: text;
+}

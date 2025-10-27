@@ -202,6 +202,25 @@ def run_roundtrips() -> dict:
                     recovered_from_zsteg = text
                     break
 
+            # Check new structured format
+            candidates = decode_result.get("candidates", [])
+            best_candidate = decode_result.get("best_candidate")
+            recovered_from_candidates = None
+            if best_candidate:
+                text = best_candidate.get("text", "")
+                if GOLDEN_MESSAGE in text:
+                    recovered_from_candidates = text
+
+            # Verify SKIPPED statuses for PNG
+            analyzers = decode_result.get("analyzers", [])
+            steghide_skipped = False
+            outguess_skipped = False
+            for analyzer in analyzers:
+                if analyzer.get("name") == "steghide" and analyzer.get("status") == "skipped":
+                    steghide_skipped = True
+                if analyzer.get("name") == "outguess" and analyzer.get("status") == "skipped":
+                    outguess_skipped = True
+
             expected_core = GOLDEN_MESSAGE.rstrip(".")
             message_found = bool(
                 any(GOLDEN_MESSAGE in line for line in decode_result.get("text_lines", []))
@@ -209,6 +228,7 @@ def run_roundtrips() -> dict:
                 or (recovered_message == GOLDEN_MESSAGE)
                 or (recovered_message is not None and expected_core in recovered_message)
                 or (recovered_from_zsteg is not None and GOLDEN_MESSAGE in recovered_from_zsteg)
+                or (recovered_from_candidates is not None and GOLDEN_MESSAGE in recovered_from_candidates)
             )
 
             decode_subdir = DECODE_DIR / Path(encoded_filename).stem
@@ -244,7 +264,12 @@ def run_roundtrips() -> dict:
                 "plane": encode_result.get("plane"),
                 "recovered_message": recovered_message,
                 "recovered_from_zsteg": recovered_from_zsteg,
+                "recovered_from_candidates": recovered_from_candidates,
                 "recovered_texts_count": len(recovered_texts),
+                "candidates_count": len(candidates),
+                "has_best_candidate": best_candidate is not None,
+                "steghide_skipped": steghide_skipped,
+                "outguess_skipped": outguess_skipped,
             }
 
             runs.append(run_record)
