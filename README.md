@@ -124,12 +124,55 @@ Eclipsera automatically detects PNG images and adjusts analyzer behavior for bes
 - **File format detection**: The decoder uses magic bytes to detect PNG vs JPEG automatically
 - **Twitter-safe mode**: The encoder's "Twitter-safe" option compresses to <900KB while preserving LSB capacity
 
-### Visibility features
-The decoder UI now includes:
-- **🔓 Recovered Text**: Shows plaintext extracted from PNG LSB planes
-- **🔬 Diagnostics**: Technical details (selector, byte length, hex preview)
-- **📊 Analyzer Status**: Clean table showing ok/skipped/error counts
-- **📋 Full analyzer logs**: Expandable section with detailed output
+### Decoder visibility
+The decoder UI has been enhanced to ensure recovered plaintext is impossible to miss:
+
+**Primary results (always visible):**
+- **🔓 recovered text** — Large multiline text area with the best candidate, plus Copy and Save .txt buttons
+- **all candidates** — List of all recovered snippets with source tool, selector, and byte length; each with a Copy button
+
+**Tabbed interface for detailed analysis:**
+
+1. **Summary** — Concise status showing:
+   - Image metadata (format, width×height, size in MB)
+   - Detected selectors that yielded text
+   - Best candidate path (tool → selector → bytes)
+
+2. **Analyzers** — Table with expandable rows for each tool:
+   - Status: ✅ ok / ⏭️ skipped / ❌ error
+   - Reason for skipped/error status
+   - Trimmed stdout/stderr (first/last ~150 lines)
+   - Download full logs buttons
+
+3. **Bit-plane Explorer** — Interactive grid showing R,G,B,A bits 0..7:
+   - Click any bit-plane to generate and view full-size
+   - Lazy generation (no precomputation overhead)
+   - Useful for visual inspection of LSB patterns
+
+4. **Channel Text Dumps** — Multi-decoder attempts for each channel:
+   - Extracts LSB data from R, G, B, A channels
+   - Tries: plain utf-8, utf-16le/be, base64→utf-8, zlib→utf-8, url-decode, rot13
+   - Displays only non-empty hits in separate text areas
+   - Search box to highlight text across dumps
+
+5. **Diagnostics** — Technical details:
+   - List of selectors that produced text (e.g., `zsteg b1,r,lsb,xy`)
+   - Byte lengths for each candidate
+   - 64-byte hex+ASCII preview
+
+6. **Logs** — Consolidated pipeline output:
+   - Read-only text area with full logs
+   - Download full logs button
+
+**Format-specific behavior:**
+- **PNG inputs**: steghide/outguess marked as ⏭️ SKIPPED ("PNG not supported by this analyzer")
+- **JPEG inputs**: zsteg marked as ⏭️ SKIPPED ("png-focused")
+- Missing binaries: SKIPPED instead of ERROR
+
+**Troubleshooting:**
+- If plaintext isn't visible, toggle "show everything" checkbox
+- Inspect channel text dumps for alternative encodings
+- Check diagnostics tab for raw hex preview of recovered data
 
 ### Manual extraction
 For debugging, you can manually extract text from a PNG using the helper script:

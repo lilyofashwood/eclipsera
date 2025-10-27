@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 from pathlib import Path
 from typing import Any, Dict
 
@@ -11,11 +12,19 @@ from app.adapters.decoder_adapter import DecoderOptions, analyze_image
 from app.adapters.encoder_adapter import EncoderOptions, encode_text_to_image
 from app.ui.components import (
     inject_css,
+    render_all_candidates,
     render_analyzer_status_table,
+    render_analyzers_table,
     render_artifact_downloads,
+    render_bitplane_explorer,
+    render_channel_text_dumps,
     render_diagnostics,
+    render_diagnostics_detailed,
+    render_meta,
     render_plane_gallery,
     render_recovered_text,
+    render_recovered_text_primary,
+    render_summary_tab,
     render_text_findings,
 )
 
@@ -32,6 +41,22 @@ uploaded_file = st.file_uploader(
     accept_multiple_files=False,
     help="Use the same image for encrypting or decrypting hidden payloads.",
 )
+
+# Show thumbnail preview when file is uploaded
+if uploaded_file:
+    col_preview, col_meta = st.columns([1, 2])
+    with col_preview:
+        st.image(uploaded_file, caption="Uploaded image", use_column_width=True)
+    with col_meta:
+        from PIL import Image
+        img_bytes = uploaded_file.getvalue()
+        try:
+            with Image.open(io.BytesIO(img_bytes)) as img:
+                st.caption(f"**Format:** {img.format}")
+                st.caption(f"**Size:** {img.width} × {img.height}")
+                st.caption(f"**File size:** {len(img_bytes) / 1024:.1f} KB")
+        except Exception:
+            pass
 
 disabled = uploaded_file is None
 
@@ -148,19 +173,29 @@ if mode == "Encrypt":
         st.json(encode_result.get("options_applied", {}))
 
 else:  # Decrypt
-    password = st.text_input(
-        "Password (optional)",
-        value="",
-        type="password",
-        disabled=disabled,
-        help="Passphrase for tools like steghide/outguess when needed.",
-    )
-    deep_analysis = st.checkbox(
-        "Deep analysis",
-        value=False,
-        help="Runs outguess in addition to the standard analyzers.",
-        disabled=disabled,
-    )
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        password = st.text_input(
+            "Password (optional)",
+            value="",
+            type="password",
+            disabled=disabled,
+            help="Passphrase for tools like steghide/outguess when needed.",
+        )
+    with col2:
+        deep_analysis = st.checkbox(
+            "Deep analysis",
+            value=False,
+            help="Runs outguess in addition to the standard analyzers.",
+            disabled=disabled,
+        )
+    with col3:
+        show_everything = st.checkbox(
+            "Show everything",
+            value=True,
+            help="Display all analysis tabs including bit-planes and channel dumps.",
+            disabled=disabled,
+        )
 
     analyze_clicked = st.button(
         "Analyze",
@@ -192,19 +227,61 @@ else:  # Decrypt
 
     decode_result: Dict[str, Any] | None = st.session_state.get("decode_result")
     if decode_result:
-        # Show recovered text prominently (above other results)
-        render_recovered_text(decode_result.get("recovered_texts", []))
+        # Primary results - always visible
+        st.markdown("---")
 
-        # Show diagnostics accordion
-        render_diagnostics(decode_result.get("recovered_texts", []))
+        # Display recovered text prominently
+        render_recovered_text_primary(decode_result)
 
-        # Show analyzer status table
-        render_analyzer_status_table(decode_result.get("results", {}))
+        # Display all candidates
+        render_all_candidates(decode_result)
 
-        # Show other analysis results
-        render_text_findings(decode_result.get("text_lines", []))
-        render_plane_gallery(decode_result.get("planes", []))
-        render_artifact_downloads(decode_result.get("artifacts", []))
+        st.markdown("---")
 
-        with st.expander("📋 Full analyzer logs", expanded=False):
-            st.text(decode_result.get("logs", ""))
+        # Tabbed interface for detailed analysis
+        tabs = st.tabs([
+            "Summary",
+            "Analyzers",
+            "Bit-plane Explorer",
+            "Channel Text Dumps",
+            "Diagnostics",
+            "Logs"
+        ])
+
+        with tabs[0]:  # Summary
+            render_summary_tab(decode_result)
+
+        with tabs[1]:  # Analyzers
+            render_analyzers_table(decode_result)
+
+        with tabs[2]:  # Bit-plane Explorer
+            render_bitplane_explorer(decode_result)
+
+        with tabs[3]:  # Channel Text Dumps
+            render_channel_text_dumps(decode_result)
+
+        with tabs[4]:  # Diagnostics
+            render_diagnostics_detailed(decode_result)
+
+        with tabs[5]:  # Logs
+            st.text_area(
+                "Full analyzer logs",
+                value=decode_result.get("logs", "No logs available"),
+                height=400,
+                disabled=True,
+                label_visibility="collapsed",
+            )
+            st.download_button(
+                "Download full logs",
+                data=decode_result.get("logs", ""),
+                file_name="analyzer_logs.txt",
+                mime="text/plain",
+                key="download-logs",
+            )
+
+        # Legacy views (for backward compatibility, hidden in expander)
+        with st.expander("🔧 Legacy views", expanded=False):
+            render_analyzer_status_table(decode_result.get("results", {}))
+            render_text_findings(decode_result.get("text_lines", []))
+            render_plane_gallery(decode_result.get("planes", []))
+            render_artifact_downloads(decode_result.get("artifacts", []))
