@@ -11,16 +11,19 @@ from app.adapters.decoder_adapter import DecoderOptions, analyze_image
 from app.adapters.encoder_adapter import EncoderOptions, encode_text_to_image
 from app.ui.components import (
     inject_css,
+    render_analyzer_status_table,
     render_artifact_downloads,
+    render_diagnostics,
     render_plane_gallery,
     render_recovered_text,
     render_text_findings,
 )
 
-st.set_page_config(page_title="Eclipsera", page_icon="🌙", layout="wide")
+st.set_page_config(page_title="eclipsera", page_icon="🌘", layout="wide")
 inject_css()
 
-st.title("Eclipsera")
+# Branding with eclipse glyph
+st.markdown("# 🌘 eclipsera")
 st.caption("A calm Tokyo café for clandestine pixels.")
 
 uploaded_file = st.file_uploader(
@@ -141,6 +144,7 @@ if mode == "Encrypt":
             mime="image/png",
             key="download-encoded",
         )
+        st.info("⚠️ **Important:** Use the downloaded PNG directly. Re-saving through Preview, Twitter, iMessage, or screenshot tools may alter LSB data and destroy the hidden message.")
         st.json(encode_result.get("options_applied", {}))
 
 else:  # Decrypt
@@ -188,24 +192,19 @@ else:  # Decrypt
 
     decode_result: Dict[str, Any] | None = st.session_state.get("decode_result")
     if decode_result:
-        st.markdown(f"**Summary:** {decode_result['summary']}")
-
         # Show recovered text prominently (above other results)
         render_recovered_text(decode_result.get("recovered_texts", []))
 
-        # Only show errors (not SKIPPED statuses) as warnings
-        errors = [
-            (name, data)
-            for name, data in decode_result.get("results", {}).items()
-            if isinstance(data, dict) and data.get("status") == "error"
-        ]
-        if errors:
-            for name, data in errors:
-                st.warning(f"{name}: {data.get('error', 'Unknown error')}")
+        # Show diagnostics accordion
+        render_diagnostics(decode_result.get("recovered_texts", []))
 
+        # Show analyzer status table
+        render_analyzer_status_table(decode_result.get("results", {}))
+
+        # Show other analysis results
         render_text_findings(decode_result.get("text_lines", []))
         render_plane_gallery(decode_result.get("planes", []))
         render_artifact_downloads(decode_result.get("artifacts", []))
 
-        with st.expander("Analyzer logs", expanded=False):
+        with st.expander("📋 Full analyzer logs", expanded=False):
             st.text(decode_result.get("logs", ""))

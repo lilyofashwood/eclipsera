@@ -69,7 +69,7 @@ def render_recovered_text(recovered_texts: Iterable[dict]) -> None:
     if not texts:
         return
 
-    st.subheader("Recovered Text")
+    st.subheader("🔓 Recovered Text")
     st.success("Hidden message(s) detected!")
 
     for candidate in texts:
@@ -79,3 +79,80 @@ def render_recovered_text(recovered_texts: Iterable[dict]) -> None:
 
         with st.expander(f"{label} ({selector})", expanded=(len(texts) == 1)):
             st.code(text, language=None)
+
+
+def render_diagnostics(recovered_texts: Iterable[dict]) -> None:
+    """Display technical diagnostics about where text was found."""
+    texts = list(recovered_texts)
+    if not texts:
+        return
+
+    with st.expander("🔬 Diagnostics", expanded=False):
+        st.caption("Technical details about recovered data")
+
+        for candidate in texts:
+            label = candidate.get("label", "Unknown")
+            selector = candidate.get("selector", "")
+            bytes_len = candidate.get("bytes_len", 0)
+            hex_preview = candidate.get("hex_preview", "")
+
+            st.markdown(f"**{label}** (`{selector}`)")
+            st.text(f"Length: {bytes_len} bytes")
+            if hex_preview:
+                st.text(f"First 64 bytes (hex): {hex_preview}")
+            st.markdown("---")
+
+
+def render_analyzer_status_table(results: dict) -> None:
+    """Display analyzer status in a clean table format."""
+    if not results:
+        return
+
+    st.subheader("📊 Analyzer Status")
+
+    # Group by status
+    ok_analyzers = []
+    skipped_analyzers = []
+    error_analyzers = []
+
+    for analyzer, data in sorted(results.items()):
+        if not isinstance(data, dict):
+            continue
+
+        status = data.get("status", "unknown")
+        reason = data.get("reason", "") or data.get("error", "")
+
+        if status == "ok":
+            ok_analyzers.append(analyzer)
+        elif status == "skipped":
+            skipped_analyzers.append((analyzer, reason))
+        else:
+            error_analyzers.append((analyzer, reason))
+
+    # Display in a compact format
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("✅ Successful", len(ok_analyzers))
+        if ok_analyzers:
+            with st.expander("Details", expanded=False):
+                for analyzer in ok_analyzers:
+                    st.text(f"• {analyzer}")
+
+    with col2:
+        st.metric("⏭️ Skipped", len(skipped_analyzers))
+        if skipped_analyzers:
+            with st.expander("Details", expanded=False):
+                for analyzer, reason in skipped_analyzers:
+                    st.text(f"• {analyzer}")
+                    if reason:
+                        st.caption(f"  {reason}")
+
+    with col3:
+        st.metric("❌ Errors", len(error_analyzers))
+        if error_analyzers:
+            with st.expander("Details", expanded=True):
+                for analyzer, reason in error_analyzers:
+                    st.text(f"• {analyzer}")
+                    if reason:
+                        st.caption(f"  {reason}")
