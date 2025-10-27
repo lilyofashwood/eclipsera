@@ -1,0 +1,6 @@
+
+!vendor/decoder/.env
+
+!vendor/
+!vendor/decoder/
+!vendor/decoder/.env

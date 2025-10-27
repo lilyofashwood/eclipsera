@@ -20,7 +20,11 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+RUN mkdir -p vendor/decoder && [ -f vendor/decoder/.env ] || touch vendor/decoder/.env
+RUN mkdir -p vendor/decoder && [ -f vendor/decoder/.env ] || touch vendor/decoder/.env
+RUN mkdir -p vendor/decoder && [ -f vendor/decoder/.env ] || touch vendor/decoder/.env
 
+RUN mkdir -p vendor/decoder && [ -f vendor/decoder/.env ] || touch vendor/decoder/.env
 RUN scripts/check_vendor_integrity.py
 
 EXPOSE 8501
