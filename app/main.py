@@ -20,6 +20,7 @@ from app.ui.components import (
     render_channel_text_dumps,
     render_diagnostics,
     render_diagnostics_detailed,
+    render_lsb_breakdown,
     render_meta,
     render_plane_gallery,
     render_recovered_text,
@@ -88,7 +89,7 @@ if mode == "Encrypt":
         height=180,
     )
 
-    cola, colb, colc = st.columns(3)
+    cola, colb = st.columns(2)
     with cola:
         twitter_safe = st.checkbox(
             "Twitter-safe",
@@ -96,27 +97,14 @@ if mode == "Encrypt":
             help="Re-compress the image to stay under ~900 KB before embedding.",
             disabled=disabled,
         )
-        zlib_toggle = st.checkbox(
-            "zlib compress",
-            value=False,
-            help="Compress the message before hiding it.",
-            disabled=disabled,
-        )
     with colb:
-        lsb_overall = st.checkbox(
+        st.checkbox(
             "LSB overall",
-            value=False,
+            value=True,
             help="Blend across every available channel.",
-            disabled=disabled,
+            disabled=True,
         )
-    with colc:
-        channels = st.multiselect(
-            "Per-channel",
-            options=["R", "G", "B", "A"],
-            default=["R", "G", "B"],
-            help="Select precise channels when not using LSB overall.",
-            disabled=disabled or lsb_overall,
-        )
+    lsb_overall = True
 
     generate_clicked = st.button(
         "Generate",
@@ -136,8 +124,8 @@ if mode == "Encrypt":
                 options = EncoderOptions(
                     twitter_safe=twitter_safe,
                     lsb_overall=lsb_overall,
-                    channels=channels,
-                    zlib=zlib_toggle,
+                    channels=None,
+                    zlib=False,
                     output_basename=f"{studio_stem}_encoded.png",
                 )
                 result = encode_text_to_image(
@@ -173,29 +161,15 @@ if mode == "Encrypt":
         st.json(encode_result.get("options_applied", {}))
 
 else:  # Decrypt
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        password = st.text_input(
-            "Password (optional)",
-            value="",
-            type="password",
-            disabled=disabled,
-            help="Passphrase for tools like steghide/outguess when needed.",
-        )
-    with col2:
-        deep_analysis = st.checkbox(
-            "Deep analysis",
-            value=False,
-            help="Runs outguess in addition to the standard analyzers.",
-            disabled=disabled,
-        )
-    with col3:
-        show_everything = st.checkbox(
-            "Show everything",
-            value=True,
-            help="Display all analysis tabs including bit-planes and channel dumps.",
-            disabled=disabled,
-        )
+    password = st.text_input(
+        "Password (optional)",
+        value="",
+        type="password",
+        disabled=disabled,
+        help="Passphrase for tools like steghide/outguess when needed.",
+    )
+
+    deep_analysis = True
 
     analyze_clicked = st.button(
         "Analyze",
@@ -227,6 +201,8 @@ else:  # Decrypt
 
     decode_result: Dict[str, Any] | None = st.session_state.get("decode_result")
     if decode_result:
+        render_lsb_breakdown(decode_result)
+
         # Primary results - always visible
         st.markdown("---")
 

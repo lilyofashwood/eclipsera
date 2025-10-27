@@ -154,6 +154,90 @@ def render_all_candidates(result: Dict[str, Any]) -> None:
             )
 
 
+def _generate_lsb_visualization(image_path: Path | str | None, channels: Iterable[str]) -> Optional[bytes]:
+    """Generate a binary visualization for the provided channels' LSB."""
+
+    if image_path is None:
+        return None
+
+    try:
+        with Image.open(image_path) as src:
+            img = src.convert("RGBA")
+    except Exception:
+        return None
+
+    width, height = img.size
+    plane_img = Image.new("L", (width, height))
+    pixels = plane_img.load()
+
+    channel_map = {"R": 0, "G": 1, "B": 2, "A": 3}
+    indices = [channel_map[ch.upper()] for ch in channels if ch.upper() in channel_map]
+    if not indices:
+        return None
+
+    for y in range(height):
+        for x in range(width):
+            pixel = img.getpixel((x, y))
+            bits = [(pixel[idx] & 1) for idx in indices]
+            value = 255 if any(bits) else 0
+            pixels[x, y] = value
+
+    try:
+        buf = io.BytesIO()
+        plane_img.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception:
+        return None
+
+
+def render_lsb_breakdown(result: Dict[str, Any]) -> None:
+    """Display LSB overall and per-channel findings with visuals."""
+
+    recovered = result.get("recovered_texts", [])
+    lsb_candidates = {
+        candidate.get("selector", ""): candidate
+        for candidate in recovered
+        if candidate.get("source") == "lsb"
+    }
+
+    image_path = result.get("bitplane_path")
+    image_path_obj = None
+    if image_path:
+        candidate_path = Path(image_path)
+        if candidate_path.exists():
+            image_path_obj = candidate_path
+
+    st.subheader("LSB analysis")
+
+    def render_section(title: str, selector_keys: Iterable[str], channels: Iterable[str], key_suffix: str) -> None:
+        candidate = next((lsb_candidates.get(key) for key in selector_keys if key in lsb_candidates), None)
+        image_bytes = _generate_lsb_visualization(image_path_obj, channels)
+
+        st.markdown(f"**{title}**")
+        if image_bytes:
+            st.image(image_bytes, caption=f"{title} LSB visualization", use_column_width=True)
+        else:
+            st.caption("No visualization available for this plane.")
+
+        text_value = candidate.get("text", "") if candidate else ""
+        if not text_value:
+            text_value = "No text recovered for this plane."
+
+        st.text_area(
+            f"{title} text",
+            value=text_value,
+            height=160,
+            disabled=True,
+            label_visibility="collapsed",
+            key=f"lsb-text-{key_suffix}",
+        )
+
+    render_section("LSB overall (RGB)", ["RGB", "RGBA"], ["R", "G", "B"], "overall")
+    render_section("R plane", ["R"], ["R"], "r")
+    render_section("G plane", ["G"], ["G"], "g")
+    render_section("B plane", ["B"], ["B"], "b")
+
+
 def render_recovered_text(recovered_texts: Iterable[dict]) -> None:
     """Display recovered text from targeted extraction (e.g., zsteg) - legacy format."""
     texts = list(recovered_texts)
