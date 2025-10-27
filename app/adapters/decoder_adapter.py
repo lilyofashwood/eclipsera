@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -41,6 +42,59 @@ def _sanitise_filename(name: str) -> str:
     if "." not in candidate:
         return candidate + ".png"
     return candidate
+
+
+def _detect_png(image_bytes: bytes) -> bool:
+    """Detect if the image is a PNG based on magic bytes."""
+    # PNG signature: 89 50 4E 47 0D 0A 1A 0A
+    return image_bytes[:8] == b'\x89PNG\r\n\x1a\n'
+
+
+def _extract_with_zsteg(image_path: Path) -> List[Dict[str, str]]:
+    """
+    Attempt to extract hidden text from PNG using targeted zsteg selectors.
+    Returns a list of candidates with their selector and extracted text.
+    """
+    candidates: List[Dict[str, str]] = []
+    selectors = [
+        ("b1,r,lsb,xy", "LSB Red"),
+        ("b1,r,msb,xy", "MSB Red"),
+        ("b1,g,lsb,xy", "LSB Green"),
+        ("b1,b,lsb,xy", "LSB Blue"),
+        ("b1,rgb,lsb,xy", "LSB RGB"),
+    ]
+
+    for selector, label in selectors:
+        try:
+            result = subprocess.run(
+                ["zsteg", "-E", selector, str(image_path)],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            if result.returncode == 0 and result.stdout:
+                text = result.stdout.strip()
+                # Filter out empty or binary-looking content
+                if text and len(text) > 0 and _is_printable_text(text[:200]):
+                    candidates.append({
+                        "selector": selector,
+                        "label": label,
+                        "text": text,
+                    })
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            continue
+
+    return candidates
+
+
+def _is_printable_text(text: str) -> bool:
+    """Check if text appears to be printable (not binary garbage)."""
+    if not text:
+        return False
+    printable_chars = sum(1 for c in text if c.isprintable() or c in '\n\r\t')
+    ratio = printable_chars / len(text)
+    return ratio > 0.7
 
 
 def _load_results(results_path: Path) -> Dict[str, Any]:
@@ -144,6 +198,7 @@ def analyze_image(
     image_name = _sanitise_filename(opts.filename)
 
     supplemental_results: Dict[str, Dict[str, Any]] = {}
+    is_png = _detect_png(image_bytes)
 
     with tempfile.TemporaryDirectory(prefix="eclipsera-decode-") as tmp:
         tmp_path = Path(tmp)
@@ -152,17 +207,33 @@ def analyze_image(
         image_path = output_dir.parent / image_name
         image_path.write_bytes(image_bytes)
 
+        # Pre-mark non-applicable analyzers for PNG images
+        if is_png:
+            supplemental_results["steghide"] = {
+                "status": "skipped",
+                "reason": "PNG not supported by steghide (JPEG/BMP only)",
+            }
+            if opts.deep:
+                supplemental_results["outguess"] = {
+                    "status": "skipped",
+                    "reason": "PNG not supported by outguess (JPEG-centric)",
+                }
+
         analyzers: List[tuple[str, Any, tuple[Any, ...]]] = [
             ("binwalk", analyze_binwalk, (image_path, output_dir)),
             ("decomposer", analyze_decomposer, (image_path, output_dir)),
             ("exiftool", analyze_exiftool, (image_path, output_dir)),
             ("foremost", analyze_foremost, (image_path, output_dir)),
             ("strings", analyze_strings, (image_path, output_dir)),
-            ("steghide", analyze_steghide, (image_path, output_dir, opts.password)),
             ("zsteg", analyze_zsteg, (image_path, output_dir)),
         ]
 
-        if opts.deep:
+        # Only run steghide on non-PNG images
+        if not is_png:
+            analyzers.append(("steghide", analyze_steghide, (image_path, output_dir, opts.password)))
+
+        # Only run outguess on non-PNG images when deep mode is enabled
+        if opts.deep and not is_png:
             analyzers.append(
                 ("outguess", analyze_outguess, (image_path, output_dir, opts.password))
             )
@@ -180,6 +251,11 @@ def analyze_image(
                     "status": "error",
                     "error": str(exc),
                 }
+
+        # Attempt targeted extraction for PNG images
+        recovered_texts: List[Dict[str, str]] = []
+        if is_png:
+            recovered_texts = _extract_with_zsteg(image_path)
 
         results_path = output_dir / "results.json"
         results = _load_results(results_path)
@@ -199,6 +275,9 @@ def analyze_image(
                 output = data.get("output")
                 snippet = ", ".join(output[:3]) if isinstance(output, list) else ""
                 log_lines.append(f"[{analyzer}] ok {snippet}")
+            elif status == "skipped":
+                reason = data.get("reason", "Not applicable")
+                log_lines.append(f"[{analyzer}] skipped: {reason}")
             else:
                 log_lines.append(f"[{analyzer}] {status}: {data.get('error', '')}")
 
@@ -209,4 +288,5 @@ def analyze_image(
             "logs": "\n".join(log_lines),
             "results": results,
             "text_lines": text_lines,
+            "recovered_texts": recovered_texts,
         }
