@@ -1,12 +1,12 @@
-binwalk: error; decomposer: ok; exiftool: ok; foremost: ok; steghide: error; strings: ok; zsteg: error
+binwalk: error; decomposer: ok; exiftool: error; foremost: error; steghide: skipped; strings: ok; zsteg: error
 
 Message detected: yes
 
 Analyzer statuses:
 - binwalk: error
 - decomposer: ok
-- exiftool: ok
-- foremost: ok
-- steghide: error
+- exiftool: error
+- foremost: error
+- steghide: skipped
 - strings: ok
 - zsteg: error

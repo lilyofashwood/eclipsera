@@ -1,13 +1,13 @@
-binwalk: error; decomposer: ok; exiftool: ok; foremost: ok; outguess: error; steghide: error; strings: ok; zsteg: error
+binwalk: error; decomposer: ok; exiftool: error; foremost: error; outguess: skipped; steghide: skipped; strings: ok; zsteg: error
 
 Message detected: no
 
 Analyzer statuses:
 - binwalk: error
 - decomposer: ok
-- exiftool: ok
-- foremost: ok
-- outguess: error
-- steghide: error
+- exiftool: error
+- foremost: error
+- outguess: skipped
+- steghide: skipped
 - strings: ok
 - zsteg: error

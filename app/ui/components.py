@@ -61,3 +61,21 @@ def render_text_findings(text_lines: Iterable[str], *, header: str = "Text findi
     st.subheader(header)
     snippet = "\n".join(lines[:50])
     st.code(snippet)
+
+
+def render_recovered_text(recovered_texts: Iterable[dict]) -> None:
+    """Display recovered text from targeted extraction (e.g., zsteg)."""
+    texts = list(recovered_texts)
+    if not texts:
+        return
+
+    st.subheader("Recovered Text")
+    st.success("Hidden message(s) detected!")
+
+    for candidate in texts:
+        label = candidate.get("label", "Unknown")
+        selector = candidate.get("selector", "")
+        text = candidate.get("text", "")
+
+        with st.expander(f"{label} ({selector})", expanded=(len(texts) == 1)):
+            st.code(text, language=None)

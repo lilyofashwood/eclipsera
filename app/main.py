@@ -13,6 +13,7 @@ from app.ui.components import (
     inject_css,
     render_artifact_downloads,
     render_plane_gallery,
+    render_recovered_text,
     render_text_findings,
 )
 
@@ -189,10 +190,14 @@ else:  # Decrypt
     if decode_result:
         st.markdown(f"**Summary:** {decode_result['summary']}")
 
+        # Show recovered text prominently (above other results)
+        render_recovered_text(decode_result.get("recovered_texts", []))
+
+        # Only show errors (not SKIPPED statuses) as warnings
         errors = [
             (name, data)
             for name, data in decode_result.get("results", {}).items()
-            if isinstance(data, dict) and data.get("status") != "ok"
+            if isinstance(data, dict) and data.get("status") == "error"
         ]
         if errors:
             for name, data in errors:

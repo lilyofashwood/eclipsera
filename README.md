@@ -82,6 +82,36 @@ Render deployment checklist:
 
 _(Deployment requires platform credentials; capture the final URL after verifying an end-to-end encode/decode round trip on the hosted instance.)_
 
+## Troubleshooting decode on PNG
+
+Eclipsera automatically detects PNG images and adjusts analyzer behavior for best results:
+
+### PNG-specific extraction
+- **PNG images**: Use LSB (Least Significant Bit) planes with zsteg for extraction
+  - Analyzers `steghide` and `outguess` are marked as SKIPPED (they only support JPEG/BMP)
+  - The decoder automatically runs targeted zsteg extraction with multiple selectors (LSB Red, MSB Red, LSB RGB, etc.)
+  - Recovered text appears in the "Recovered Text" section above other analyzer results
+
+### JPEG images
+- **JPEG images**: `steghide` and `outguess` analyzers will run normally
+  - Use these tools when working with JPEG carrier images
+  - PNG-specific zsteg extraction is skipped for JPEG files
+
+### Important notes
+- **Avoid re-saving images** through tools that recompress them (e.g., Preview, Twitter, iMessage, screenshot tools)
+  - These operations often destroy LSB data embedded in PNG images
+  - Always use the original encoded PNG file for decryption
+- **Compression artifacts**: If the image has been compressed or converted, LSB steganography may be unrecoverable
+- **File format detection**: The decoder uses magic bytes to detect PNG vs JPEG automatically
+
+### Manual extraction
+For debugging, you can manually extract text from a PNG using the helper script:
+```sh
+python scripts/extract_with_zsteg.py path/to/image.png
+```
+
+This will attempt extraction with multiple zsteg selectors and display any recovered text.
+
 ## Credits
 - **Encoder**: original project from `eclipsera_blueprint/encoder`.
 - **Decoder**: AperiSolve-inspired project from `eclipsera_blueprint/decoder`.

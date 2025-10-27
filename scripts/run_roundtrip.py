@@ -193,12 +193,22 @@ def run_roundtrips() -> dict:
                 ),
             )
 
+            # Check for message in various sources
+            recovered_texts = decode_result.get("recovered_texts", [])
+            recovered_from_zsteg = None
+            for candidate in recovered_texts:
+                text = candidate.get("text", "")
+                if GOLDEN_MESSAGE in text:
+                    recovered_from_zsteg = text
+                    break
+
             expected_core = GOLDEN_MESSAGE.rstrip(".")
             message_found = bool(
                 any(GOLDEN_MESSAGE in line for line in decode_result.get("text_lines", []))
                 or GOLDEN_MESSAGE in decode_result.get("logs", "")
                 or (recovered_message == GOLDEN_MESSAGE)
                 or (recovered_message is not None and expected_core in recovered_message)
+                or (recovered_from_zsteg is not None and GOLDEN_MESSAGE in recovered_from_zsteg)
             )
 
             decode_subdir = DECODE_DIR / Path(encoded_filename).stem
@@ -233,6 +243,8 @@ def run_roundtrips() -> dict:
                 "message_found": message_found,
                 "plane": encode_result.get("plane"),
                 "recovered_message": recovered_message,
+                "recovered_from_zsteg": recovered_from_zsteg,
+                "recovered_texts_count": len(recovered_texts),
             }
 
             runs.append(run_record)
@@ -260,14 +272,23 @@ def write_reports(data: dict) -> None:
         f"Successful runs: {data['successful_runs']} / {data['total_runs']}"
     )
     lines.append("")
-    lines.append("| Cover | Variant | Message Found | Notes |")
-    lines.append("| --- | --- | --- | --- |")
+    lines.append("| Cover | Variant | Message Found | Recovered Text | Notes |")
+    lines.append("| --- | --- | --- | --- | --- |")
     for run in data["runs"]:
         cover = run["cover_image"]
         variant = run["scenario"]["label"]
         status = "✅" if run["message_found"] else "⚠️"
+
+        # Show recovered text from zsteg or fallback message
+        recovered = run.get("recovered_from_zsteg") or run.get("recovered_message") or ""
+        if recovered:
+            recovered_preview = recovered[:50] + "..." if len(recovered) > 50 else recovered
+            recovered_preview = recovered_preview.replace("|", "\\|")  # Escape pipes for markdown
+        else:
+            recovered_preview = "(none)"
+
         notes = run["decode_summary"] or ""
-        lines.append(f"| {cover} | {variant} | {status} | {notes} |")
+        lines.append(f"| {cover} | {variant} | {status} | {recovered_preview} | {notes} |")
 
     (RESULTS_DIR / "report.md").write_text("\n".join(lines), encoding="utf-8")
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-10-27T00:42:05Z",
+  "generated_at": "2025-10-27T02:20:20Z",
   "overall_pass": false,
   "total_runs": 6,
   "successful_runs": 4,
@@ -17,10 +17,12 @@
           "deep_analysis": false
         }
       },
-      "decode_summary": "binwalk: error; decomposer: ok; exiftool: ok; foremost: ok; steghide: error; strings: ok; zsteg: error",
+      "decode_summary": "binwalk: error; decomposer: ok; exiftool: error; foremost: error; steghide: skipped; strings: ok; zsteg: error",
       "message_found": true,
       "plane": "RGB",
-      "recovered_message": "Eclipsera golden vector v1: hello, moon"
+      "recovered_message": "Eclipsera golden vector v1: hello, moon",
+      "recovered_from_zsteg": null,
+      "recovered_texts_count": 0
     },
     {
       "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_1_unencrypted.png",
@@ -39,10 +41,12 @@
           "deep_analysis": false
         }
       },
-      "decode_summary": "binwalk: error; decomposer: ok; exiftool: ok; foremost: ok; steghide: error; strings: ok; zsteg: error",
+      "decode_summary": "binwalk: error; decomposer: ok; exiftool: error; foremost: error; steghide: skipped; strings: ok; zsteg: error",
       "message_found": true,
       "plane": "RGB",
-      "recovered_message": "Eclipsera golden vector v1: hello, moon"
+      "recovered_message": "Eclipsera golden vector v1: hello, moon",
+      "recovered_from_zsteg": null,
+      "recovered_texts_count": 0
     },
     {
       "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_1_unencrypted.png",
@@ -61,10 +65,12 @@
           "deep_analysis": true
         }
       },
-      "decode_summary": "binwalk: error; decomposer: ok; exiftool: ok; foremost: ok; outguess: error; steghide: error; strings: ok; zsteg: error",
+      "decode_summary": "binwalk: error; decomposer: ok; exiftool: error; foremost: error; outguess: skipped; steghide: skipped; strings: ok; zsteg: error",
       "message_found": false,
       "plane": "RGB",
-      "recovered_message": null
+      "recovered_message": null,
+      "recovered_from_zsteg": null,
+      "recovered_texts_count": 0
     },
     {
       "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_2.png",
@@ -79,10 +85,12 @@
           "deep_analysis": false
         }
       },
-      "decode_summary": "binwalk: error; decomposer: ok; exiftool: ok; foremost: ok; steghide: error; strings: ok; zsteg: error",
+      "decode_summary": "binwalk: error; decomposer: ok; exiftool: error; foremost: error; steghide: skipped; strings: ok; zsteg: error",
       "message_found": true,
       "plane": "RGB",
-      "recovered_message": "Eclipsera golden vector v1: hello, moon"
+      "recovered_message": "Eclipsera golden vector v1: hello, moon",
+      "recovered_from_zsteg": null,
+      "recovered_texts_count": 0
     },
     {
       "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_2.png",
@@ -101,10 +109,12 @@
           "deep_analysis": false
         }
       },
-      "decode_summary": "binwalk: error; decomposer: ok; exiftool: ok; foremost: ok; steghide: error; strings: ok; zsteg: error",
+      "decode_summary": "binwalk: error; decomposer: ok; exiftool: error; foremost: error; steghide: skipped; strings: ok; zsteg: error",
       "message_found": true,
       "plane": "RGB",
-      "recovered_message": "Eclipsera golden vector v1: hello, moon"
+      "recovered_message": "Eclipsera golden vector v1: hello, moon",
+      "recovered_from_zsteg": null,
+      "recovered_texts_count": 0
     },
     {
       "cover_image": "sample_photos_to_encode_text_to_LSB/test_photo_2.png",
@@ -123,10 +133,12 @@
           "deep_analysis": true
         }
       },
-      "decode_summary": "binwalk: error; decomposer: ok; exiftool: ok; foremost: ok; outguess: error; steghide: error; strings: ok; zsteg: error",
+      "decode_summary": "binwalk: error; decomposer: ok; exiftool: error; foremost: error; outguess: skipped; steghide: skipped; strings: ok; zsteg: error",
       "message_found": false,
       "plane": "RGB",
-      "recovered_message": null
+      "recovered_message": null,
+      "recovered_from_zsteg": null,
+      "recovered_texts_count": 0
     }
   ]
 }
