@@ -4,3 +4,5 @@
 !vendor/
 !vendor/decoder/
 !vendor/decoder/.env
+
+eclipsera_blueprints/
