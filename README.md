@@ -44,7 +44,7 @@ notes/
    ```
 3. Run the Streamlit app:
    ```sh
-   streamlit run app/app.py
+   streamlit run app/main.py
    ```
 
 The UI expects you to upload a carrier image first, then choose **Encrypt** or **Decrypt**. Results stay on screen after each action for convenient comparison.
@@ -72,7 +72,7 @@ Build locally:
 ```sh
 docker build -t eclipsera .
 ```
-The container runs `streamlit run app/app.py` on `$PORT` (default 8080). All decoder CLI tools from `requirements-system.txt` are installed, including `zsteg` via RubyGems.
+The container runs `streamlit run app/main.py` on `$PORT` (default 8080). All decoder CLI tools from `requirements-system.txt` are installed, including `zsteg` via RubyGems.
 
 Render deployment checklist:
 1. Push this repository to GitHub (e.g. `Eclipsera`).

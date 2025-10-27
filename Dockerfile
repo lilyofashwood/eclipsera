@@ -23,6 +23,5 @@ COPY . .
 
 RUN scripts/check_vendor_integrity.py
 
-EXPOSE 8080
-
-CMD ["/bin/sh", "-c", "streamlit run app/app.py --server.port ${PORT:-8501} --server.address 0.0.0.0"]
+EXPOSE 8501
+CMD ["/bin/sh","-c","streamlit run app/main.py --server.port ${PORT:-8501} --server.address 0.0.0.0"]
