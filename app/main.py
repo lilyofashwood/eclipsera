@@ -23,21 +23,21 @@ st.set_page_config(page_title="eclipsera", page_icon="🌘", layout="wide")
 inject_css()
 
 # Branding with eclipse glyph
-st.markdown("# 🌘 eclipsera")
-st.caption("A calm Tokyo café for clandestine pixels.")
+st.markdown("# eclipsera 🌘")
+st.caption("a calm tokyo café for clandestine pixels.")
 
 uploaded_file = st.file_uploader(
-    "Upload a carrier/target image",
+    "upload a carrier/target image",
     type=["png", "jpg", "jpeg", "webp"],
     accept_multiple_files=False,
-    help="Use the same image for encrypting or decrypting hidden payloads.",
+    help="use the same image for encrypting or decrypting hidden payloads.",
 )
 
 disabled = uploaded_file is None
 
 mode = st.radio(
-    "Mode",
-    options=["Encrypt", "Decrypt"],
+    "mode",
+    options=["encrypt", "decrypt"],
     horizontal=True,
     index=0,
     disabled=disabled,
@@ -55,10 +55,10 @@ studio_stem = Path(filename).stem
 
 st.markdown("---")
 
-if mode == "Encrypt":
+if mode == "encrypt":
     text_to_hide = st.text_area(
-        "Text to hide",
-        placeholder="Eclipsera golden vector v1: hello, moon.",
+        "text to hide",
+        placeholder="eclipsera golden vector v1: hello, moon.",
         disabled=disabled,
         height=180,
     )
@@ -66,35 +66,35 @@ if mode == "Encrypt":
     cola, colb, colc = st.columns(3)
     with cola:
         twitter_safe = st.checkbox(
-            "Twitter-safe",
+            "twitter-safe",
             value=True,
-            help="Re-compress the image to stay under ~900 KB before embedding.",
+            help="re-compress the image to stay under ~900 KB before embedding.",
             disabled=disabled,
         )
         zlib_toggle = st.checkbox(
             "zlib compress",
             value=False,
-            help="Compress the message before hiding it.",
+            help="compress the message before hiding it.",
             disabled=disabled,
         )
     with colb:
         lsb_overall = st.checkbox(
-            "LSB overall",
+            "lsb overall",
             value=False,
-            help="Blend across every available channel.",
+            help="blend across every available channel.",
             disabled=disabled,
         )
     with colc:
         channels = st.multiselect(
-            "Per-channel",
+            "per-channel",
             options=["R", "G", "B", "A"],
             default=["R", "G", "B"],
-            help="Select precise channels when not using LSB overall.",
+            help="select precise channels when not using lsb overall.",
             disabled=disabled or lsb_overall,
         )
 
     generate_clicked = st.button(
-        "Generate",
+        "generate",
         type="primary",
         use_container_width=True,
         disabled=disabled,
@@ -102,12 +102,12 @@ if mode == "Encrypt":
 
     if generate_clicked:
         if cover_bytes is None:
-            st.warning("Please upload a cover image before encoding.")
+            st.warning("please upload a cover image before encoding.")
         else:
             try:
                 message = text_to_hide or ""
                 if not message.strip():
-                    raise ValueError("Please enter a message to hide.")
+                    raise ValueError("please enter a message to hide.")
                 options = EncoderOptions(
                     twitter_safe=twitter_safe,
                     lsb_overall=lsb_overall,
@@ -124,46 +124,46 @@ if mode == "Encrypt":
                 st.warning(str(exc))
                 st.session_state["encode_result"] = None
             except Exception as exc:  # pragma: no cover - surfaced to UI
-                st.error(f"Encoding failed: {exc}")
+                st.error(f"encoding failed: {exc}")
                 st.session_state["encode_result"] = None
             else:
                 st.session_state["encode_result"] = result
-                st.success("Message embedded. Preview below.")
+                st.success("message embedded. preview below.")
 
     encode_result: Dict[str, Any] | None = st.session_state.get("encode_result")
     if encode_result:
         st.image(
             encode_result["image_bytes"],
-            caption=f"Encoded preview — plane {encode_result['plane']}",
+            caption=f"encoded preview — plane {encode_result['plane']}",
             use_column_width=True,
         )
         st.download_button(
-            "Download encoded image",
+            "download encoded image",
             data=encode_result["image_bytes"],
             file_name=encode_result["filename"],
             mime="image/png",
             key="download-encoded",
         )
-        st.info("⚠️ **Important:** Use the downloaded PNG directly. Re-saving through Preview, Twitter, iMessage, or screenshot tools may alter LSB data and destroy the hidden message.")
+        st.info("⚠️ **important:** use the downloaded png directly. re-saving through preview, twitter, imessage, or screenshot tools may alter lsb data and destroy the hidden message.")
         st.json(encode_result.get("options_applied", {}))
 
-else:  # Decrypt
+else:  # decrypt
     password = st.text_input(
-        "Password (optional)",
+        "password (optional)",
         value="",
         type="password",
         disabled=disabled,
-        help="Passphrase for tools like steghide/outguess when needed.",
+        help="passphrase for tools like steghide/outguess when needed.",
     )
     deep_analysis = st.checkbox(
-        "Deep analysis",
+        "deep analysis",
         value=False,
-        help="Runs outguess in addition to the standard analyzers.",
+        help="runs outguess in addition to the standard analyzers.",
         disabled=disabled,
     )
 
     analyze_clicked = st.button(
-        "Analyze",
+        "analyze",
         type="primary",
         use_container_width=True,
         disabled=disabled,
@@ -171,7 +171,7 @@ else:  # Decrypt
 
     if analyze_clicked:
         if cover_bytes is None:
-            st.warning("Please upload an image to analyze.")
+            st.warning("please upload an image to analyze.")
         else:
             try:
                 options = DecoderOptions(
@@ -184,11 +184,11 @@ else:  # Decrypt
                 st.warning(str(exc))
                 st.session_state["decode_result"] = None
             except Exception as exc:  # pragma: no cover
-                st.error(f"Analysis failed: {exc}")
+                st.error(f"analysis failed: {exc}")
                 st.session_state["decode_result"] = None
             else:
                 st.session_state["decode_result"] = result
-                st.success("Analysis finished.")
+                st.success("analysis finished.")
 
     decode_result: Dict[str, Any] | None = st.session_state.get("decode_result")
     if decode_result:
@@ -206,5 +206,5 @@ else:  # Decrypt
         render_plane_gallery(decode_result.get("planes", []))
         render_artifact_downloads(decode_result.get("artifacts", []))
 
-        with st.expander("📋 Full analyzer logs", expanded=False):
+        with st.expander("full analyzer logs 📋", expanded=False):
             st.text(decode_result.get("logs", ""))

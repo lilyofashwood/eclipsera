@@ -18,10 +18,10 @@ def inject_css() -> None:
 def render_plane_gallery(planes: Iterable[dict]) -> None:
     planes = list(planes)
     if not planes:
-        st.caption("No bit-plane previews were generated for this run.")
+        st.caption("no bit-plane previews were generated for this run.")
         return
 
-    st.subheader("Bit-plane previews")
+    st.subheader("bit-plane previews")
     cols_per_row = 3
     for index in range(0, len(planes), cols_per_row):
         row = planes[index : index + cols_per_row]
@@ -37,10 +37,10 @@ def render_plane_gallery(planes: Iterable[dict]) -> None:
 def render_artifact_downloads(artifacts: Iterable[dict]) -> None:
     artifacts = list(artifacts)
     if not artifacts:
-        st.caption("No downloadable artifacts were produced.")
+        st.caption("no downloadable artifacts were produced.")
         return
 
-    st.subheader("Extracted artifacts")
+    st.subheader("extracted artifacts")
     for artifact in artifacts:
         label = f"Download {artifact['name']} ({artifact['source']})"
         st.download_button(
@@ -52,10 +52,10 @@ def render_artifact_downloads(artifacts: Iterable[dict]) -> None:
         )
 
 
-def render_text_findings(text_lines: Iterable[str], *, header: str = "Text findings") -> None:
+def render_text_findings(text_lines: Iterable[str], *, header: str = "text findings") -> None:
     lines = [line for line in text_lines if line]
     if not lines:
-        st.caption("No candidate text snippets detected yet.")
+        st.caption("no candidate text snippets detected yet.")
         return
 
     st.subheader(header)
@@ -69,8 +69,8 @@ def render_recovered_text(recovered_texts: Iterable[dict]) -> None:
     if not texts:
         return
 
-    st.subheader("🔓 Recovered Text")
-    st.success("Hidden message(s) detected!")
+    st.subheader("recovered text 🔓")
+    st.success("hidden message(s) detected!")
 
     for candidate in texts:
         label = candidate.get("label", "Unknown")
@@ -87,8 +87,8 @@ def render_diagnostics(recovered_texts: Iterable[dict]) -> None:
     if not texts:
         return
 
-    with st.expander("🔬 Diagnostics", expanded=False):
-        st.caption("Technical details about recovered data")
+    with st.expander("diagnostics 🔬", expanded=False):
+        st.caption("technical details about recovered data")
 
         for candidate in texts:
             label = candidate.get("label", "Unknown")
@@ -97,9 +97,9 @@ def render_diagnostics(recovered_texts: Iterable[dict]) -> None:
             hex_preview = candidate.get("hex_preview", "")
 
             st.markdown(f"**{label}** (`{selector}`)")
-            st.text(f"Length: {bytes_len} bytes")
+            st.text(f"length: {bytes_len} bytes")
             if hex_preview:
-                st.text(f"First 64 bytes (hex): {hex_preview}")
+                st.text(f"first 64 bytes (hex): {hex_preview}")
             st.markdown("---")
 
 
@@ -108,7 +108,7 @@ def render_analyzer_status_table(results: dict) -> None:
     if not results:
         return
 
-    st.subheader("📊 Analyzer Status")
+    st.subheader("analyzer status 📊")
 
     # Group by status
     ok_analyzers = []
@@ -133,25 +133,25 @@ def render_analyzer_status_table(results: dict) -> None:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("✅ Successful", len(ok_analyzers))
+        st.metric("successful ✅", len(ok_analyzers))
         if ok_analyzers:
-            with st.expander("Details", expanded=False):
+            with st.expander("details", expanded=False):
                 for analyzer in ok_analyzers:
                     st.text(f"• {analyzer}")
 
     with col2:
-        st.metric("⏭️ Skipped", len(skipped_analyzers))
+        st.metric("skipped ⏭️", len(skipped_analyzers))
         if skipped_analyzers:
-            with st.expander("Details", expanded=False):
+            with st.expander("details", expanded=False):
                 for analyzer, reason in skipped_analyzers:
                     st.text(f"• {analyzer}")
                     if reason:
                         st.caption(f"  {reason}")
 
     with col3:
-        st.metric("❌ Errors", len(error_analyzers))
+        st.metric("errors ❌", len(error_analyzers))
         if error_analyzers:
-            with st.expander("Details", expanded=True):
+            with st.expander("details", expanded=True):
                 for analyzer, reason in error_analyzers:
                     st.text(f"• {analyzer}")
                     if reason:
